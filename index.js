@@ -7,6 +7,9 @@ const axios = require('axios');
 app.set("view engine","ejs");
 app.use(express.static(__dirname + "/public"));
 
+var cookieParser = require('cookie-parser');
+app.use(cookieParser());
+
 // parse application/json
 app.use(cors());
 
@@ -20,6 +23,7 @@ app.use(bodyParser.json());
 
 // Database Crendential Omitted
 
+
 //connect to database
 conn.connect((err) => {
   if (err) throw err;
@@ -32,7 +36,7 @@ app.get("/",function(req,res){
 });
 
 app.get("/intro",function(req,res){
-  res.render("intro");
+  res.render("intro",{data: req.cookies["loggedin"]});
 });
 
 //Login APIs
@@ -54,6 +58,8 @@ app.post("/login",function(req,res){
     console.log(q);
     if(q == req.body.password)
     {
+      res.cookie("email",req.body.alumni_email);
+      res.cookie("loggedin","yes");
       res.redirect("/intro");
     } else {
       console.log("Your password is wrong");
@@ -61,7 +67,6 @@ app.post("/login",function(req,res){
   }
   });
 })
-
 
 //show all users
 app.get('/api/users', (req, res) => {
@@ -81,8 +86,12 @@ app.get("/register",function(req,res){
 
 
 //Edit Profile APIs
-app.get("/profile/edit/:email",function(req,res){
-  var sql = 'SELECT * FROM alumni_list WHERE alumni_email = "' + req.params.email + '"' ;
+app.get("/profile/edit/",function(req,res){
+  console.log(req.cookies);
+  console.log(req.cookies["email"]);
+  // console.log(req.cookie["email"]);
+  // console.log(req.cookies.email);
+  var sql = 'SELECT * FROM alumni_list WHERE alumni_email = "' + req.cookies["email"] + '"' ;
   let query = conn.query(sql, (err, results) => {
     if (err) {
       throw err;
@@ -90,7 +99,6 @@ app.get("/profile/edit/:email",function(req,res){
     console.log(results);
      res.render("edit-profile",{data:results[0]});
 });
- 
 });
 
 app.post('/api/users', (req, res) => {
@@ -100,6 +108,8 @@ app.post('/api/users', (req, res) => {
       if (err) {
         throw err;
       }
+      res.cookie("email",req.body.alumni_email);
+      res.cookie("loggedin","yes");
       res.redirect("/intro");
   });
 });
@@ -164,6 +174,24 @@ app.get("/api/events/create", function(req,res){
 // Profile APIs
 app.get("/viewprofile", function(req,res){
   res.render("profile");
+});
+
+app.get("/myprofile", function(req,res){
+  var q = 'SELECT * FROM alumni_list WHERE alumni_email = "' + req.cookies["email"] + '"' ;
+  let query = conn.query(q, (err, results) => {
+    if (err) {
+      throw err;
+    }
+    console.log(results[0]);
+    res.render("myprofile",{data: results[0]});
+
+});
+});
+
+app.get("/logout",(req,res)=>{
+  res.clearCookie("email");
+  res.cookie("loggedin","no");
+  res.redirect("/login");
 });
 
   
